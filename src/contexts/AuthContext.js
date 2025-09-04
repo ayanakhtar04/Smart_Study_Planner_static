@@ -1,0 +1,180 @@
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import axios from 'axios';
+import toast from 'react-hot-toast';
+
+const AuthContext = createContext();
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [token, setToken] = useState(localStorage.getItem('token'));
+
+  // Configure axios defaults
+  useEffect(() => {
+    if (token) {
+      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    } else {
+      delete axios.defaults.headers.common['Authorization'];
+    }
+  }, [token]);
+
+  // Static frontend: set dummy user if token exists
+  useEffect(() => {
+    if (token) {
+      setUser({
+        name: 'Demo User',
+        email: 'demo@example.com',
+      });
+    } else {
+      setUser(null);
+    }
+    setLoading(false);
+  }, [token]);
+
+  // Dummy login for static frontend: always succeed
+  const login = async (email, password) => {
+    setUser({
+      name: 'Demo User',
+      email: email,
+    });
+    setToken('demo-token');
+    localStorage.setItem('token', 'demo-token');
+    toast.success('Login successful!');
+    return { success: true };
+  };
+
+  const register = async (name, email, password) => {
+    try {
+      const response = await axios.post('/api/auth/register', {
+        name,
+        email,
+        password
+      });
+
+      const { user: userData, token: authToken } = response.data;
+      
+      setUser(userData);
+      setToken(authToken);
+      localStorage.setItem('token', authToken);
+  // Immediately set header to avoid race before useEffect runs
+  axios.defaults.headers.common['Authorization'] = `Bearer ${authToken}`;
+      
+      toast.success('Registration successful!');
+      return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.error || 'Registration failed';
+      toast.error(message);
+      return { success: false, error: message };
+    }
+  };
+
+  const logout = () => {
+    setUser(null);
+    setToken(null);
+    localStorage.removeItem('token');
+    delete axios.defaults.headers.common['Authorization'];
+    toast.success('Logged out successfully');
+  };
+
+  const updateProfile = async (profileData) => {
+    try {
+      const response = await axios.put('/api/auth/me', profileData);
+  setUser(response.data.user);
+      toast.success('Profile updated successfully!');
+      return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.error || 'Profile update failed';
+      toast.error(message);
+      return { success: false, error: message };
+    }
+  };
+
+  const uploadProfileImage = async (file) => {
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+      const response = await axios.post('/api/auth/me/profile-image', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      setUser(response.data.user);
+      toast.success('Profile image updated');
+      return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.error || 'Image upload failed';
+      toast.error(message);
+      return { success: false, error: message };
+    }
+  };
+
+  const removeProfileImage = async () => {
+    try {
+      const response = await axios.delete('/api/auth/me/profile-image');
+      setUser(response.data.user);
+      toast.success('Profile image removed');
+      return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.error || 'Failed to remove image';
+      toast.error(message);
+      return { success: false, error: message };
+    }
+  };
+
+  const changePassword = async (currentPassword, newPassword) => {
+    try {
+      await axios.put('/api/auth/change-password', {
+        currentPassword,
+        newPassword
+      });
+      
+      toast.success('Password changed successfully!');
+      return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.error || 'Password change failed';
+      toast.error(message);
+      return { success: false, error: message };
+    }
+  };
+
+  const deleteAccount = async (password) => {
+    try {
+      await axios.delete('/api/auth/me', {
+        data: { password }
+      });
+      
+      logout();
+      toast.success('Account deleted successfully');
+      return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.error || 'Account deletion failed';
+      toast.error(message);
+      return { success: false, error: message };
+    }
+  };
+
+  const value = {
+    user,
+    loading,
+    login,
+    register,
+    logout,
+    updateProfile,
+    changePassword,
+  deleteAccount,
+  uploadProfileImage,
+  removeProfileImage
+  };
+
+  return (
+    <AuthContext.Provider value={value}>
+      {children}
+    </AuthContext.Provider>
+  );
+}; 
