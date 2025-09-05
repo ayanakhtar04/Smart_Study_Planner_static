@@ -1,0 +1,13 @@
+{
+  "files": {
+    "main.css": "/Smart_Study_Planner_static/static/css/main.7a438d7e.css",
+    "main.js": "/Smart_Study_Planner_static/static/js/main.5d7bc42f.js",
+    "index.html": "/Smart_Study_Planner_static/index.html",
+    "main.7a438d7e.css.map": "/Smart_Study_Planner_static/static/css/main.7a438d7e.css.map",
+    "main.5d7bc42f.js.map": "/Smart_Study_Planner_static/static/js/main.5d7bc42f.js.map"
+  },
+  "entrypoints": [
+    "static/css/main.7a438d7e.css",
+    "static/js/main.5d7bc42f.js"
+  ]
+}
